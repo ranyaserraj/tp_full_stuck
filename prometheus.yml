@@ -1,0 +1,31 @@
+# Configuration Prometheus pour SpringDataRest
+
+global:
+  scrape_interval: 15s # Intervalle de récupération des métriques
+  evaluation_interval: 15s # Intervalle d'évaluation des règles
+  external_labels:
+    monitor: 'voiture-shop-monitor'
+
+# Configuration des endpoints à surveiller
+scrape_configs:
+  # Job pour l'application Spring Boot
+  - job_name: 'spring-boot-app'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['backend:8080']
+        labels:
+          application: 'voiture-shop'
+          environment: 'docker'
+
+  # Job pour Prometheus lui-même
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Job pour MariaDB Exporter (optionnel)
+  - job_name: 'mariadb'
+    static_configs:
+      - targets: ['mariadb-exporter:9104']
+    # Ce job sera optionnel si vous voulez monitorer MariaDB
+

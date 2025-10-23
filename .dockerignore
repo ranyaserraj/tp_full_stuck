@@ -1,0 +1,47 @@
+# Fichiers et dossiers à ignorer lors du build Docker du backend
+
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/
+mvnw
+mvnw.cmd
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.settings/
+.classpath
+.project
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Frontend (construit séparément)
+src/main/webapp/reactjs/node_modules/
+src/main/webapp/reactjs/build/
+src/main/webapp/reactjs/.env.local
+src/main/webapp/reactjs/.env.development.local
+src/main/webapp/reactjs/.env.test.local
+src/main/webapp/reactjs/.env.production.local
+src/main/webapp/reactjs/npm-debug.log*
+src/main/webapp/reactjs/yarn-debug.log*
+src/main/webapp/reactjs/yarn-error.log*
+
+# Autres
+*.md
+LICENSE
+.git/
+.gitignore
+docker-compose.yml
+Dockerfile
+*.sql
+

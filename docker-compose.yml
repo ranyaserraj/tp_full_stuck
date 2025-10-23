@@ -1,0 +1,137 @@
+services:
+  # Base de données MariaDB
+  mariadb:
+    image: mariadb:11.0
+    container_name: springdatarest-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ranyaa
+      MYSQL_DATABASE: compagnie
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - voiture-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Spring Boot
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: springdatarest-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/compagnie
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ranyaa
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - voiture-network
+    labels:
+      - "com.docker.compose.project=springdatarest"
+      - "com.docker.desktop.ports=8080"
+      - "com.docker.desktop.description=Backend Spring Boot API"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/voitures"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./src/main/webapp/reactjs
+      dockerfile: Dockerfile
+    container_name: springdatarest-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - voiture-network
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+    labels:
+      - "com.docker.compose.project=springdatarest"
+      - "com.docker.desktop.ports=3000"
+      - "com.docker.desktop.description=Frontend React - Voiture Shop"
+
+  # Prometheus - Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: springdatarest-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - voiture-network
+    depends_on:
+      - backend
+    labels:
+      - "com.docker.compose.project=springdatarest"
+      - "com.docker.desktop.ports=9090"
+      - "com.docker.desktop.description=Prometheus Monitoring"
+
+  # Grafana - Visualisation
+  grafana:
+    image: grafana/grafana:latest
+    container_name: springdatarest-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+    networks:
+      - voiture-network
+    depends_on:
+      - prometheus
+    labels:
+      - "com.docker.compose.project=springdatarest"
+      - "com.docker.desktop.ports=3001"
+      - "com.docker.desktop.description=Grafana Dashboard"
+
+networks:
+  voiture-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
